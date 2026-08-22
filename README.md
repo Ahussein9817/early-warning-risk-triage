@@ -11,11 +11,15 @@ pinned: false
 
 # Early-Warning Risk Triage Model
 
-**Status: in progress.** This README is being filled in section by section as the pipeline is built, per `BUILD_INSTRUCTIONS.md`'s build mode. Sections marked "to be completed" will be filled in as later stages of the pipeline land.
+Tests whether fusing unstructured complaint-narrative text with structured case fields improves prediction of case escalation, on real CFPB debt-collection complaints — versus structured data alone.
 
 ## Problem
 
-*To be completed — see `project_description.md` for the full problem statement in the meantime.*
+Systems that predict risk before it becomes a real problem — a complaint escalating, a claim turning severe, a case going bad — commonly rely on structured data alone (categories, flags, history) and skip the unstructured text sitting right next to it (the complaint itself, a note, a narrative). Fusing the two is not a novel idea — it's an established pattern in healthcare triage, insurance claims processing, and support-ticket escalation prediction. What's largely missing is a transparent, reproducible demonstration of *how much* the text actually helps: most evidence is vendor claims or results from proprietary systems, not a controlled baseline-vs-fused comparison anyone can check.
+
+This project runs that comparison in the open, on public data: the CFPB Consumer Complaint Database, scoped to debt-collection complaints. It builds a baseline model (structured fields only) and a fused model (structured fields + narrative text embeddings), trains both on the identical data and split, and scores both against a hand-labeled evaluation sample — producing a falsifiable, numerical answer to *does the text help, and by how much* — rather than a claim that text was used.
+
+It's a research prototype for a single-semester project, not built for any one company and not deployment-ready; see Explicit Limitations below for what that means concretely. Full problem statement and motivation: `project_description.md`.
 
 ## Data
 
@@ -108,7 +112,7 @@ Output: `models/baseline_model.joblib`, `models/fused_model.joblib`.
 
 ### Hand-labeling rubric
 
-The hand-labeled sample (150 complaints, sampled uniformly at random from the model's test split, seeded — see `src/sample_for_labeling.py`) was labeled without access to `company_response`, `timely`, or the proxy `escalated` label, so the labeler's judgment would be independent of the proxy rule rather than reproduce it.
+The hand-labeled sample (106 of a 150-row template actually labeled, sampled uniformly at random from the model's test split, seeded — see `src/sample_for_labeling.py`) was labeled without access to `company_response`, `timely`, or the proxy `escalated` label, so the labeler's judgment would be independent of the proxy rule rather than reproduce it.
 
 Working definition applied: *"escalated" means the complaint, based only on what's described (issue/sub_issue/narrative), reflects a case where the company was genuinely at fault and should be expected to make it right, or where the company's handling was clearly inadequate* — not a prediction of the actual outcome, a judgment of whether the complaint itself describes a serious, legitimate problem versus a minor or ambiguous one.
 
@@ -138,14 +142,6 @@ Both models scored against the hand-labeled sample (n=106) — the real held-out
 
 `overall` and `no_narrative` are below 0.5 (worse than random) — this traces directly to the sub_issue-concession-rate mechanism above, not to a pipeline defect (verified: complaint_id alignment between predictions and ground truth confirmed exact match; model `classes_=[0,1]` on both models, no label inversion; hand-labeled `escalated` column matches evaluation input row-for-row).
 
-## Results
-
-**Verdict: modest, directionally positive evidence that fusion helps, too small and too thin a sample to call decisive.** On the deconfounded `has_narrative` subgroup — the one comparison where a fused-model advantage can't be explained by simply detecting whether a narrative exists — fused beats baseline by +0.0174 AUC (0.6875 vs 0.6701), consistent within the short_narrative subset (+0.0167). `long_narrative` (n=18) can't be assessed for AUC at all — every hand-labeled long-narrative complaint was scored escalated, so there's no negative class to rank against, which is itself informative about what got labeled escalated but not about model quality.
-
-The more consequential finding is the base-rate divergence itself: the proxy label used for training and genuine human-judged severity disagree by a factor of ~3x in prevalence, traced to a specific, plausible mechanism (companies concede cheaply on procedural issues, deny substantively on serious ones). This means confidence in either model's *absolute* quality should be low regardless of the fused-vs-baseline comparison — the comparison itself (which model discriminates better, given the same imperfect proxy-trained starting point) is more trustworthy than either model's standalone numbers.
-
-**What would strengthen this result:** a larger hand-labeled sample (n=51 in the headline subgroup is thin — a ±0.017 AUC delta is a fragile signal at this size) and/or a training label rule that incorporates severity signals beyond company concession behavior.
-
 ### Dashboard
 
 `dashboard/app.py` — Streamlit. Structured fields are dropdowns populated from the actual trained categories (so every selection maps to a real one-hot column, verified directly — an out-of-top-20 company resolves to exactly `company_bucketed_Other=1`, no silent mishandling); the narrative is free text, embedded live with MiniLM on every prediction — a genuine hosted-inference demo, not a lookup table. A "Load a random real example" button pulls from the 106-row hand-labeled sample and shows the human-judged ground truth alongside both models' live predictions for direct comparison. Verified locally end-to-end: narrative and no-narrative (zero-vector) paths both produce distinct, sensible predictions from both models.
@@ -156,7 +152,11 @@ Deployed via HuggingFace Spaces' GitHub-sync (this repo's README.md carries the 
 
 ## Results
 
-*To be completed.*
+**Verdict: modest, directionally positive evidence that fusion helps, too small and too thin a sample to call decisive.** On the deconfounded `has_narrative` subgroup — the one comparison where a fused-model advantage can't be explained by simply detecting whether a narrative exists — fused beats baseline by +0.0174 AUC (0.6875 vs 0.6701), consistent within the short_narrative subset (+0.0167). `long_narrative` (n=18) can't be assessed for AUC at all — every hand-labeled long-narrative complaint was scored escalated, so there's no negative class to rank against, which is itself informative about what got labeled escalated but not about model quality.
+
+The more consequential finding is the base-rate divergence itself: the proxy label used for training and genuine human-judged severity disagree by a factor of ~3x in prevalence, traced to a specific, plausible mechanism (companies concede cheaply on procedural issues, deny substantively on serious ones). This means confidence in either model's *absolute* quality should be low regardless of the fused-vs-baseline comparison — the comparison itself (which model discriminates better, given the same imperfect proxy-trained starting point) is more trustworthy than either model's standalone numbers.
+
+**What would strengthen this result:** a larger hand-labeled sample (n=51 in the headline subgroup is thin — a ±0.017 AUC delta is a fragile signal at this size) and/or a training label rule that incorporates severity signals beyond company concession behavior.
 
 ## Explicit Limitations
 
