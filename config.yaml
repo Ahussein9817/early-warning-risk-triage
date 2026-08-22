@@ -1,0 +1,130 @@
+# Single source of truth for tunable values. Per BUILD_INSTRUCTIONS.md Requirements:
+# "this and all other tunable values (seed, paths, API params) live in one config file —
+# never hardcoded elsewhere."
+
+seed: 42
+
+data:
+  raw_dir: data/raw
+  processed_dir: data/processed
+  labeled_path: data/labeled/hand_labeled.csv   # the 100-200 row hand-labeled evaluation sample (Section 2 does not write this — you create it manually)
+  hand_label_template_filename: hand_labeled_TEMPLATE.csv
+  hand_label_sample_size: 150
+  raw_filename: debt_collection_complaints_raw.json
+  labeled_filename: debt_collection_complaints_labeled.json   # full proxy-labeled dataset (Section 2 output)
+  structured_features_filename: structured_features.csv
+  text_embeddings_filename: text_embeddings.csv
+
+cfpb:
+  base_url: "https://www.consumerfinance.gov/data-research/consumer-complaints/search/api/v1/"
+  product: "Debt collection"
+  page_size: 100       # CFPB API's per-request record limit (max supported by the endpoint)
+  sort: "created_date_asc"     # required for reproducibility — see BUILD_INSTRUCTIONS.md note
+  request_timeout_seconds: 30
+  max_retries: 3              # CFPB's API is slow/flaky at this volume; retry transient failures
+  retry_backoff_seconds: 5    # doubles each retry: 5s, 10s, 20s
+  # Field names verified 2026-08-21 against the live CFPB API response shape.
+  # consumer_disputed and timely_response/consumer_complaint_narrative from the
+  # original spec do not match the live schema — see BUILD_INSTRUCTIONS.md Inputs
+  # section for the full explanation (consumer_disputed was discontinued in 2017).
+  required_fields:
+    - complaint_id
+    - product
+    - sub_product
+    - issue
+    - sub_issue
+    - company_response
+    - timely               # was "timely_response" in the original spec
+    - state
+    - complaint_what_happened   # was "consumer_complaint_narrative" in the original spec
+    - has_narrative
+    - date_received
+    - company
+
+  # Stratified sampling: draws an even slice from each quarter rather than a single
+  # contiguous block, so the dataset spans multiple years instead of ~4 weeks.
+  # Cutoff is fixed at 2026-05-21 (3 months before this config was written), not
+  # "today" — recent complaints often still show company_response="In progress",
+  # which would corrupt the label rule below. A fixed cutoff also keeps the pull
+  # reproducible forever, regardless of when the pipeline is re-run.
+  sampling:
+    records_per_stratum: 400
+    strata:
+      - {start: "2023-01-01", end: "2023-03-31"}
+      - {start: "2023-04-01", end: "2023-06-30"}
+      - {start: "2023-07-01", end: "2023-09-30"}
+      - {start: "2023-10-01", end: "2023-12-31"}
+      - {start: "2024-01-01", end: "2024-03-31"}
+      - {start: "2024-04-01", end: "2024-06-30"}
+      - {start: "2024-07-01", end: "2024-09-30"}
+      - {start: "2024-10-01", end: "2024-12-31"}
+      - {start: "2025-01-01", end: "2025-03-31"}
+      - {start: "2025-04-01", end: "2025-06-30"}
+      - {start: "2025-07-01", end: "2025-09-30"}
+      - {start: "2025-10-01", end: "2025-12-31"}
+      - {start: "2026-01-01", end: "2026-03-31"}
+      - {start: "2026-04-01", end: "2026-05-21"}
+
+label:
+  # Escalated = 1 if company_response is one of these relief categories, OR timely == "No".
+  # See BUILD_INSTRUCTIONS.md Architecture section for the full rule and rationale.
+  relief_company_responses:
+    - "Closed with monetary relief"
+    - "Closed with non-monetary relief"
+    - "Closed with relief"
+
+features:
+  # Structured features for the baseline model (Stage 1). Deliberately excludes
+  # company_response and timely — those two fields are what the label rule (above)
+  # is derived from, so using them as features would leak the label directly into
+  # the input (the model would reverse-engineer the label rule instead of genuinely
+  # predicting escalation). `product` is also excluded: constant across all records
+  # (dataset is filtered to Debt collection only), so it carries zero information.
+  categorical_fields:
+    - sub_product
+    - issue
+    - sub_issue
+    - state
+  # `company` has 689 unique values on 5,600 records — one-hot encoding all of them
+  # would add 689 mostly-sparse columns (most companies appear only 1-5 times),
+  # risking overfitting on rare companies and dwarfing every other structured
+  # feature by column count. Bucketed instead: top N companies by complaint volume
+  # get their own category, everything else falls into "Other".
+  # N=20 chosen 2026-08-21: covers 52.96% of records, and each included company has
+  # >=45 complaints (comfortably enough for both train and test splits to see real
+  # examples of it). Coverage-per-column drops sharply past N=20 (~4 points/company
+  # for N=1-10, vs ~0.6 points/company for N=20-30) with per-company counts thin
+  # enough (28-45) to risk reintroducing the sparsity problem bucketing exists to
+  # avoid. See README.md Methodology for the full cumulative-coverage table.
+  company_top_n: 20
+
+embedding:
+  model_name: "sentence-transformers/all-MiniLM-L6-v2"
+  dimension: 384
+
+split:
+  test_size: 0.2
+  stratify_on: escalated   # keeps the same ~26.6% positive rate in both train and test
+
+evaluate:
+  long_narrative_word_threshold: 180   # matches the MiniLM 256-token truncation proxy used in Section 4
+  decision_threshold: 0.5
+  report_filename: comparison_report.md
+
+models:
+  dir: models
+  baseline_filename: baseline_model.joblib
+  fused_filename: fused_model.joblib
+  logistic_regression:
+    max_iter: 1000
+    class_weight: balanced   # dataset is imbalanced (26.6% escalated)
+    # C=0.1 chosen 2026-08-21 after testing C=1.0/0.5/0.1 on the baseline model:
+    # three company_bucketed features (Kriya Capital, CL Holdings, Transworld Systems)
+    # showed perfect separation (100%/0%/0% escalation rates at n=104/202/88) and
+    # correspondingly unstable, inflated coefficients at C=1.0 (+3.64/-3.46/-2.78).
+    # C=0.1 nearly halves all three (+1.85/-1.78/-1.16) for a <1% relative AUC cost
+    # (0.7940->0.7878 on the internal test split) and a slight precision gain.
+    # Applied to both baseline and fused models (not just baseline) since the fused
+    # model shares the same company_bucketed columns — using different regularization
+    # between the two would itself become a confound in the baseline-vs-fused comparison.
+    C: 0.1

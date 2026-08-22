@@ -1,0 +1,17 @@
+.venv/
+venv/
+__pycache__/
+*.pyc
+.DS_Store
+
+data/raw/*
+!data/raw/.gitkeep
+# Large regeneratable intermediates stay out of git (rebuild via the pipeline).
+# dashboard_categories.json is small and is the one processed/ file the
+# deployed dashboard actually needs bundled, so it's tracked explicitly.
+data/processed/*
+!data/processed/.gitkeep
+!data/processed/dashboard_categories.json
+
+*.egg-info/
+.pytest_cache/

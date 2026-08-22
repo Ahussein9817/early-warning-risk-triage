@@ -1,0 +1,14 @@
+# Grows section by section as the pipeline is built. Ingest (Section 1) needs:
+requests==2.32.3
+PyYAML==6.0.2
+pandas==2.2.3
+
+# Text embeddings (Section 4):
+sentence-transformers==6.0.0
+torch==2.13.0
+
+# Models (Section 5):
+scikit-learn==1.9.0
+
+# Dashboard (Section 7):
+streamlit==1.62.0
