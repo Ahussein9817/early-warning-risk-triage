@@ -16,7 +16,7 @@ All seven pipeline sections are complete and verified against real data (not jus
 - [x] **Section 4, Text embeddings.** `all-MiniLM-L6-v2`, zero-imputed for no-narrative rows (verified 3,125/3,125 exact zero vectors), bit-exact reproducible.
 - [x] **Section 5, Models.** Logistic regression, `C=0.1` L2 regularization (see Architecture), same train/test split verified identical for both models.
 - [x] **Section 6, Evaluate.** Scored against a 106-row hand-labeled sample. Headline finding is a base-rate divergence between the proxy label and hand-judged ground truth (see Architecture and Acceptance criteria).
-- [x] **Section 7, Dashboard.** Streamlit app, live MiniLM inference, verified in-browser. HuggingFace Spaces is the resolved deployment target (see `OPEN_DECISIONS.md`) but the public Space has not yet been created/pushed. That's an execution step requiring your HF account, not an open design decision.
+- [x] **Section 7, Dashboard.** Streamlit app, live MiniLM inference, verified in-browser. Streamlit Community Cloud is the resolved deployment target (revised from HuggingFace Spaces, see `OPEN_DECISIONS.md`) but the public deployment has not yet been created. That's an execution step requiring your Streamlit/GitHub account, not an open design decision.
 
 Remaining before this is a fully finished deliverable: the README's Problem section (still stubbed to `project_description.md`), and actually deploying the dashboard (see `OPEN_DECISIONS.md`).
 
@@ -52,7 +52,7 @@ The baseline-vs-fused comparison is the deliverable, not optional polish added a
 - Embedding model: `sentence-transformers/all-MiniLM-L6-v2` (384-dim, ~80MB). **Resolved and documented** in README.md Methodology → Text embeddings and here: chosen over `all-mpnet-base-v2` (higher quality, ~4-5x slower on CPU, ~420MB) and `BAAI/bge-small-en-v1.5` (comparable size/quality but needs a query-instruction prefix convention) for fast CPU inference and a small footprint, given no guaranteed GPU and a semester timeline.
   - **Accepted limitation: MiniLM's 256-token max input length truncates long narratives.** 28.7% of narratives with text (711/2,475, word-count proxy; 25.2% confirmed by direct tokenizer measurement) are long enough to risk truncation to roughly the opening ~200 words. Accepted rather than mitigated with chunk-and-average (rejected: adds complexity, dilutes rather than clarifies signal). This is a measurement limitation, not evidence against the hypothesis, escalation-relevant language (regulatory threats, repeated-contact complaints, "unresolved after months" language) often appears later in long narratives, so the fused model's true benefit on long narratives may be understated. This is exactly why Section 6 splits the comparison by narrative length (see Acceptance criteria).
 - **Company bucketing (Section 3): top-20 + "Other", resolved 2026-08-21.** `company` has 689 unique values on 5,600 records; one-hot encoding all of them would add 689 mostly-sparse columns. N=20 chosen from a full cumulative-coverage sweep (see README.md Methodology for the table): covers 52.96% of records, each included company has ≥45 complaints (workable across the train/test split), and coverage-per-column drops sharply past N≈20. Verified programmatically: an out-of-top-20 company resolves to exactly `company_bucketed_Other=1`, no double-counting, no silent mishandling.
-- Streamlit dashboard is deployed to HuggingFace Spaces (public URL) in addition to running locally via `streamlit run`; no other cloud account or paid service required. **Deployment target resolved**, see `OPEN_DECISIONS.md` for status (decision made; actually creating/pushing the public Space is still pending).
+- Streamlit dashboard is deployed to Streamlit Community Cloud (public URL) in addition to running locally via `streamlit run`; no paid service required. **Deployment target resolved** (revised 2026-08-23 from HuggingFace Spaces after HF deprecated free-tier Streamlit hosting, see `OPEN_DECISIONS.md`); actually creating the public deployment is still pending.
 
 ## Architecture
 
@@ -89,7 +89,7 @@ Constraint on the pipeline: complaints with no narrative (roughly 74% of CFPB co
 - [x] Company dropdown correctness verified programmatically: an out-of-top-20 company resolves to exactly `company_bucketed_Other=1` in the feature vector, not silently mishandled.
 - [x] No-narrative state is captioned with the specific Section 6 finding for that subgroup (fused offers little advantage over baseline there), not a generic message.
 - [x] Visual system: real color palette (`.streamlit/config.toml`), bordered panels per logical section, `st.metric` with a fused-vs-baseline delta, typographic hierarchy distinguishing subtitle/body/labels/disclaimer, spacing that matches actual content rather than leftover space.
-- [ ] Deployed to a public HuggingFace Space, target resolved (see `OPEN_DECISIONS.md`), execution (creating the Space, pushing) not yet done.
+- [ ] Deployed to Streamlit Community Cloud, target resolved (see `OPEN_DECISIONS.md`), execution (creating the deployment) not yet done.
 
 ## Examples
 
