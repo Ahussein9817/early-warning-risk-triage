@@ -110,6 +110,10 @@ evaluate:
   long_narrative_word_threshold: 180   # matches the MiniLM 256-token truncation proxy used in Section 4
   decision_threshold: 0.5
   report_filename: comparison_report.md
+  # Paired bootstrap (same resampled rows for both models per iteration, so the
+  # delta's uncertainty reflects their correlation on shared rows) to quantify
+  # how much to trust the AUC deltas given the hand-labeled sample's small n.
+  n_bootstrap: 2000
 
 models:
   dir: models

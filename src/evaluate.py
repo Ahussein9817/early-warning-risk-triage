@@ -20,6 +20,7 @@ from pathlib import Path
 from typing import Any
 
 import joblib
+import numpy as np
 import pandas as pd
 from sklearn.metrics import precision_score, recall_score, roc_auc_score
 
@@ -117,12 +118,11 @@ def build_eval_matrices(
     return X_baseline, X_fused, y
 
 
-def score_subset(model: Any, X: pd.DataFrame, y: pd.Series, threshold: float) -> dict[str, Any]:
-    """Score `model` on (X, y). AUC is None (not computed) when only one class
-    is present, roc_auc_score is mathematically undefined in that case rather
-    than a number worth reporting.
+def score_from_proba(y_proba: np.ndarray, y: np.ndarray, threshold: float) -> dict[str, Any]:
+    """Score predicted probabilities against ground truth. AUC is None (not
+    computed) when only one class is present, roc_auc_score is mathematically
+    undefined in that case rather than a number worth reporting.
     """
-    y_proba = model.predict_proba(X)[:, 1]
     y_pred = (y_proba >= threshold).astype(int)
     n = len(y)
     n_positive = int(y.sum())
@@ -137,6 +137,69 @@ def score_subset(model: Any, X: pd.DataFrame, y: pd.Series, threshold: float) ->
     }
 
 
+def bootstrap_auc_ci(
+    y: np.ndarray,
+    proba_baseline: np.ndarray,
+    proba_fused: np.ndarray,
+    n_bootstrap: int,
+    seed: int,
+    ci: float = 0.95,
+) -> dict[str, Any]:
+    """Paired bootstrap over the AUC delta: each iteration resamples row
+    indices once (with replacement) and applies the same resampled indices
+    to both models, so the delta's uncertainty reflects their correlation on
+    shared rows rather than treating baseline and fused as independent
+    populations, which would overstate the delta's true variance.
+
+    Iterations that draw a single-class resample are skipped (AUC is
+    undefined there) rather than silently zeroed or dropped without a
+    record, a high skip rate is itself informative about how thin the
+    minority class is in this subgroup.
+    """
+    rng = np.random.RandomState(seed)
+    n = len(y)
+    b_aucs: list[float] = []
+    f_aucs: list[float] = []
+    deltas: list[float] = []
+
+    for _ in range(n_bootstrap):
+        idx = rng.randint(0, n, n)
+        y_resampled = y[idx]
+        if len(np.unique(y_resampled)) < 2:
+            continue
+        b_auc = roc_auc_score(y_resampled, proba_baseline[idx])
+        f_auc = roc_auc_score(y_resampled, proba_fused[idx])
+        b_aucs.append(b_auc)
+        f_aucs.append(f_auc)
+        deltas.append(f_auc - b_auc)
+
+    n_valid = len(deltas)
+    if n_valid == 0:
+        return {
+            "n_bootstrap": n_bootstrap, "n_valid": 0,
+            "baseline_ci": None, "fused_ci": None, "delta_ci": None,
+            "delta_median": None, "pct_delta_positive": None,
+        }
+
+    alpha = (1 - ci) / 2
+
+    def pct_ci(values: list[float]) -> tuple[float, float]:
+        return (
+            float(np.percentile(values, 100 * alpha)),
+            float(np.percentile(values, 100 * (1 - alpha))),
+        )
+
+    return {
+        "n_bootstrap": n_bootstrap,
+        "n_valid": n_valid,
+        "baseline_ci": pct_ci(b_aucs),
+        "fused_ci": pct_ci(f_aucs),
+        "delta_ci": pct_ci(deltas),
+        "delta_median": float(np.median(deltas)),
+        "pct_delta_positive": float(np.mean(np.array(deltas) > 0)),
+    }
+
+
 def compute_comparison(
     baseline_model: Any,
     fused_model: Any,
@@ -145,8 +208,12 @@ def compute_comparison(
     y: pd.Series,
     hand_df: pd.DataFrame,
     threshold: float,
-) -> dict[str, dict[str, dict[str, Any]]]:
-    """Score both models overall and on each has_narrative/length subgroup."""
+    n_bootstrap: int,
+    seed: int,
+) -> dict[str, dict[str, Any]]:
+    """Score both models overall and on each has_narrative/length subgroup,
+    plus a paired bootstrap CI on the AUC delta for each subgroup.
+    """
     subgroup_masks = {
         "overall": pd.Series(True, index=hand_df["complaint_id"]),
         "has_narrative": hand_df.set_index("complaint_id")["has_narrative"],
@@ -155,12 +222,19 @@ def compute_comparison(
         "long_narrative": hand_df.set_index("complaint_id")["narrative_length_bucket"] == "long",
     }
 
-    results: dict[str, dict[str, dict[str, Any]]] = {}
+    results: dict[str, dict[str, Any]] = {}
     for subgroup_name, mask in subgroup_masks.items():
         mask = mask.reindex(y.index)
+        X_b, X_f, y_sub = X_baseline[mask], X_fused[mask], y[mask]
+
+        b_proba = baseline_model.predict_proba(X_b)[:, 1]
+        f_proba = fused_model.predict_proba(X_f)[:, 1]
+        y_arr = y_sub.to_numpy()
+
         results[subgroup_name] = {
-            "baseline": score_subset(baseline_model, X_baseline[mask], y[mask], threshold),
-            "fused": score_subset(fused_model, X_fused[mask], y[mask], threshold),
+            "baseline": score_from_proba(b_proba, y_arr, threshold),
+            "fused": score_from_proba(f_proba, y_arr, threshold),
+            "bootstrap": bootstrap_auc_ci(y_arr, b_proba, f_proba, n_bootstrap, seed),
         }
     return results
 
@@ -277,6 +351,31 @@ def generate_report(
         )
     lines.append("")
 
+    lines.append(
+        "## Bootstrap confidence intervals on the AUC delta\n\n"
+        "Point estimates above are single numbers from one sample. Paired "
+        "bootstrap (resample rows with replacement, same resampled indices "
+        "applied to both models per iteration, so the delta reflects their "
+        "correlation on shared rows) quantifies how much to trust each delta "
+        "given the hand-labeled sample's size. 95% CIs that cross zero mean "
+        "the data can't rule out fused being no better (or worse) than "
+        "baseline in that subgroup.\n"
+    )
+    lines.append("| Subgroup | n | Delta 95% CI | Delta median | Bootstrap iterations where fused won | Valid resamples |")
+    lines.append("|---|---|---|---|---|---|")
+    for subgroup in ["overall", "has_narrative", "no_narrative", "short_narrative", "long_narrative"]:
+        b = results[subgroup]["baseline"]
+        boot = results[subgroup]["bootstrap"]
+        if boot["delta_ci"] is None:
+            lines.append(f"| {subgroup} | {b['n']} | undefined (no valid resamples) | n/a | n/a | 0/{boot['n_bootstrap']} |")
+            continue
+        lo, hi = boot["delta_ci"]
+        lines.append(
+            f"| {subgroup} | {b['n']} | [{lo:+.4f}, {hi:+.4f}] | {boot['delta_median']:+.4f} | "
+            f"{boot['pct_delta_positive']:.1%} | {boot['n_valid']}/{boot['n_bootstrap']} |"
+        )
+    lines.append("")
+
     lines.append("## Precision / Recall at 0.5 threshold (secondary, threshold-sensitive, see note above)\n")
     for subgroup in ["overall", "has_narrative", "no_narrative", "short_narrative", "long_narrative"]:
         b = results[subgroup]["baseline"]
@@ -326,9 +425,20 @@ def run_evaluate(config_path: Path | None = None) -> Path:
     X_baseline, X_fused, y = build_eval_matrices(hand_df, structured_df, embeddings_df)
 
     threshold = config["evaluate"]["decision_threshold"]
+    n_bootstrap = config["evaluate"]["n_bootstrap"]
     results = compute_comparison(
-        baseline_model, fused_model, X_baseline, X_fused, y, hand_df, threshold
+        baseline_model, fused_model, X_baseline, X_fused, y, hand_df, threshold,
+        n_bootstrap, config["seed"],
     )
+    headline_boot = results["has_narrative"]["bootstrap"]
+    if headline_boot["delta_ci"] is not None:
+        lo, hi = headline_boot["delta_ci"]
+        logger.info(
+            "has_narrative bootstrap (%d/%d valid resamples): delta 95%% CI [%+.4f, %+.4f], "
+            "fused wins %.1f%% of resamples.",
+            headline_boot["n_valid"], headline_boot["n_bootstrap"], lo, hi,
+            100 * headline_boot["pct_delta_positive"],
+        )
 
     labeled_path = Path(config["data"]["processed_dir"]) / config["data"]["labeled_filename"]
     with open(labeled_path) as f:

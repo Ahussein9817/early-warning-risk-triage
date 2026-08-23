@@ -136,6 +136,18 @@ Both models scored against the hand-labeled sample (n=106), the real held-out gr
 
 `overall` and `no_narrative` are below 0.5 (worse than random), this traces directly to the sub_issue-concession-rate mechanism above, not to a pipeline defect (verified: complaint_id alignment between predictions and ground truth confirmed exact match; model `classes_=[0,1]` on both models, no label inversion; hand-labeled `escalated` column matches evaluation input row-for-row).
 
+**Bootstrap confidence intervals (2,000 paired resamples per subgroup, seeded).** Point estimates above are single numbers from one sample; the hand-labeled sample is small enough that this matters. Each resample draws rows with replacement once, then scores both models on the same resampled rows, so the delta's uncertainty reflects their correlation on shared rows rather than treating baseline and fused as independent.
+
+| Subgroup | n | Delta 95% CI | Fused wins in resamples | Valid resamples |
+|---|---|---|---|---|
+| overall | 106 | [-0.0539, -0.0003] | 2.2% | 2000/2000 |
+| **has_narrative (headline)** | **51** | **[-0.1200, +0.1600]** | **60.6%** | 1902/2000 |
+| no_narrative | 55 | [-0.0117, +0.0000] | 2.1% | 2000/2000 |
+| short_narrative | 33 | [-0.1935, +0.2009] | 56.5% | 1919/2000 |
+| long_narrative | 18 | undefined | n/a | 0/2000 |
+
+**This changes the headline conclusion.** The point estimate for `has_narrative` (+0.0174 AUC) looked like a small, consistent edge for fused, but its 95% CI, **[-0.12, +0.16]**, comfortably crosses zero. Fused only wins in 60.6% of resamples, barely above a coin flip. At n=51, this data cannot distinguish "fused is slightly better" from "no real difference" or even "fused is slightly worse." The `overall` and `no_narrative` findings are the opposite case: their CIs sit entirely below zero (fused wins only ~2% of resamples), so "fused underperforms baseline there" is the one part of this comparison that's actually well-supported by the data, not just a point estimate.
+
 ### Dashboard
 
 `dashboard/app.py`, Streamlit. Structured fields are dropdowns populated from the actual trained categories (so every selection maps to a real one-hot column, verified directly, an out-of-top-20 company resolves to exactly `company_bucketed_Other=1`, no silent mishandling); the narrative is free text, embedded live with MiniLM on every prediction, a genuine hosted-inference demo, not a lookup table. A "Load a random real example" button pulls from the 106-row hand-labeled sample and shows the human-judged ground truth alongside both models' live predictions for direct comparison. Verified locally end-to-end: narrative and no-narrative (zero-vector) paths both produce distinct, sensible predictions from both models.
@@ -146,11 +158,11 @@ Deployed via Streamlit Community Cloud, connected directly to this GitHub repo (
 
 ## Results
 
-**Verdict: modest, directionally positive evidence that fusion helps, too small and too thin a sample to call decisive.** On the deconfounded `has_narrative` subgroup, the one comparison where a fused-model advantage can't be explained by simply detecting whether a narrative exists, fused beats baseline by +0.0174 AUC (0.6875 vs 0.6701), consistent within the short_narrative subset (+0.0167). `long_narrative` (n=18) can't be assessed for AUC at all, every hand-labeled long-narrative complaint was scored escalated, so there's no negative class to rank against, which is itself informative about what got labeled escalated but not about model quality.
+**Verdict: no statistically defensible evidence that fusion helps, on the current hand-labeled sample.** The point estimate for the deconfounded `has_narrative` subgroup (+0.0174 AUC, fused over baseline) looked like a small positive signal, but a paired bootstrap 95% CI, **[-0.12, +0.16]**, crosses zero: at n=51, the data cannot rule out "no real difference" or "fused is actually slightly worse." Fused wins only 60.6% of bootstrap resamples there, barely better than a coin flip. This is a materially more honest statement than the original point-estimate framing, and it directly answers this project's core question: on the evidence collected so far, fusing text does not demonstrably improve escalation prediction over structured data alone. What the data *does* support with real confidence: `overall` and `no_narrative`, fused reliably underperforms baseline there (95% CI entirely below zero, fused wins only ~2% of resamples), traced to the sub_issue-concession-rate mechanism above.
 
 The more consequential finding is the base-rate divergence itself: the proxy label used for training and genuine human-judged severity disagree by a factor of ~3x in prevalence, traced to a specific, plausible mechanism (companies concede cheaply on procedural issues, deny substantively on serious ones). This means confidence in either model's *absolute* quality should be low regardless of the fused-vs-baseline comparison, the comparison itself (which model discriminates better, given the same imperfect proxy-trained starting point) is more trustworthy than either model's standalone numbers.
 
-**What would strengthen this result:** a larger hand-labeled sample (n=51 in the headline subgroup is thin, a ±0.017 AUC delta is a fragile signal at this size) and/or a training label rule that incorporates severity signals beyond company concession behavior.
+**What would strengthen this result:** a larger hand-labeled sample. The bootstrap CI confirms n=51 in the headline subgroup is too thin to distinguish a real effect from noise (95% CI spans -0.12 to +0.16); labeling the remaining 44 rows of the original 150-row template, or going further, would narrow that interval and could turn this into an actual answer rather than an inconclusive one. A training label rule that incorporates severity signals beyond company concession behavior would also help, separately, by making the `overall`/`no_narrative` comparison meaningful instead of measuring an artifact of proxy-label bias.
 
 ## Explicit Limitations
 
