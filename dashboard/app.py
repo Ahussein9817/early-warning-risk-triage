@@ -185,6 +185,7 @@ def main() -> None:
         }
         st.session_state.narrative = ""
         st.session_state.true_label = None
+        st.session_state.loaded_snapshot = None
 
     if st.button("Load a random real example"):
         row = examples.sample(1).iloc[0]
@@ -198,6 +199,7 @@ def main() -> None:
         }
         st.session_state.narrative = row["complaint_what_happened"] if pd.notna(row["complaint_what_happened"]) else ""
         st.session_state.true_label = int(row["escalated"])
+        st.session_state.loaded_snapshot = {**st.session_state.selections, "narrative": st.session_state.narrative}
 
     col_in, col_out = st.columns([1, 1])
 
@@ -219,6 +221,10 @@ def main() -> None:
                                       "the ~56% of complaints with no narrative)",
                                       value=st.session_state.narrative, height=200)
             st.session_state.narrative = narrative
+
+            current_snapshot = {**sel, "narrative": narrative}
+            if current_snapshot != st.session_state.loaded_snapshot:
+                st.session_state.true_label = None
 
             if st.session_state.true_label is not None:
                 label_text = "Escalated" if st.session_state.true_label == 1 else "Not escalated"
