@@ -1,6 +1,10 @@
 
 # Early-Warning Risk Triage Model
 
+[![Open in Streamlit](https://static.streamlit.io/badges/streamlit_badge_black_white.svg)](https://early-warning-risk-triage.streamlit.app)
+
+**[Try the live dashboard](https://early-warning-risk-triage.streamlit.app)**, a real complaint (or one you type) goes through both models live, no setup required.
+
 Tests whether fusing unstructured complaint-narrative text with structured case fields improves prediction of case escalation, on real CFPB debt-collection complaints, versus structured data alone.
 
 ## Problem

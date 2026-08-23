@@ -16,9 +16,9 @@ All seven pipeline sections are complete and verified against real data (not jus
 - [x] **Section 4, Text embeddings.** `all-MiniLM-L6-v2`, zero-imputed for no-narrative rows (verified 3,125/3,125 exact zero vectors), bit-exact reproducible.
 - [x] **Section 5, Models.** Logistic regression, `C=0.1` L2 regularization (see Architecture), same train/test split verified identical for both models.
 - [x] **Section 6, Evaluate.** Scored against a 106-row hand-labeled sample. Headline finding is a base-rate divergence between the proxy label and hand-judged ground truth (see Architecture and Acceptance criteria).
-- [x] **Section 7, Dashboard.** Streamlit app, live MiniLM inference, verified in-browser. Streamlit Community Cloud is the resolved deployment target (revised from HuggingFace Spaces, see `OPEN_DECISIONS.md`) but the public deployment has not yet been created. That's an execution step requiring your Streamlit/GitHub account, not an open design decision.
+- [x] **Section 7, Dashboard.** Streamlit app, live MiniLM inference, verified in-browser. Deployed live to Streamlit Community Cloud (revised from HuggingFace Spaces, see `OPEN_DECISIONS.md`): https://early-warning-risk-triage.streamlit.app. Deployment needed a Python version fix (3.14, the platform default at the time, lacked prebuilt wheels for pandas/PyYAML, forcing slow source builds; redeployed pinned to Python 3.12 via Advanced settings, since `runtime.txt` is currently unreliable on this platform).
 
-Remaining before this is a fully finished deliverable: the README's Problem section (still stubbed to `project_description.md`), and actually deploying the dashboard (see `OPEN_DECISIONS.md`).
+All deliverables complete: README's Problem section is written, and the dashboard is deployed live at https://early-warning-risk-triage.streamlit.app.
 
 ## Goal
 
@@ -89,7 +89,7 @@ Constraint on the pipeline: complaints with no narrative (roughly 74% of CFPB co
 - [x] Company dropdown correctness verified programmatically: an out-of-top-20 company resolves to exactly `company_bucketed_Other=1` in the feature vector, not silently mishandled.
 - [x] No-narrative state is captioned with the specific Section 6 finding for that subgroup (fused offers little advantage over baseline there), not a generic message.
 - [x] Visual system: real color palette (`.streamlit/config.toml`), bordered panels per logical section, `st.metric` with a fused-vs-baseline delta, typographic hierarchy distinguishing subtitle/body/labels/disclaimer, spacing that matches actual content rather than leftover space.
-- [ ] Deployed to Streamlit Community Cloud, target resolved (see `OPEN_DECISIONS.md`), execution (creating the deployment) not yet done.
+- [x] Deployed to Streamlit Community Cloud: https://early-warning-risk-triage.streamlit.app
 
 ## Examples
 
