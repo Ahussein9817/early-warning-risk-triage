@@ -1,10 +1,6 @@
 
 # Early-Warning Risk Triage Model
 
-[![Open in Streamlit](https://static.streamlit.io/badges/streamlit_badge_black_white.svg)](https://early-warning-risk-triage.streamlit.app)
-
-**[Try the live dashboard](https://early-warning-risk-triage.streamlit.app)**, a real complaint (or one you type) goes through both models live, no setup required.
-
 Tests whether fusing unstructured complaint-narrative text with structured case fields improves prediction of case escalation, on real CFPB debt-collection complaints, versus structured data alone.
 
 ## Problem
@@ -12,6 +8,10 @@ Tests whether fusing unstructured complaint-narrative text with structured case 
 Systems that predict risk before it becomes a real problem (a complaint escalating, a claim turning severe, a case going bad) commonly rely on structured data alone (categories, flags, history) and skip the unstructured text sitting right next to it (the complaint itself, a note, a narrative). Fusing the two is not a novel idea: it's an established pattern in healthcare triage, insurance claims processing, and support-ticket escalation prediction. What's largely missing is a transparent, reproducible demonstration of *how much* the text actually helps: most evidence is vendor claims or results from proprietary systems, not a controlled baseline-vs-fused comparison anyone can check.
 
 This project runs that comparison in the open, on public data: the CFPB Consumer Complaint Database, scoped to debt-collection complaints. It builds a baseline model (structured fields only) and a fused model (structured fields + narrative text embeddings), trains both on the identical data and split, and scores both against a hand-labeled evaluation sample, producing a falsifiable, numerical answer to *does the text help, and by how much*, rather than a claim that text was used.
+
+[![Open in Streamlit](https://static.streamlit.io/badges/streamlit_badge_black_white.svg)](https://early-warning-risk-triage.streamlit.app)
+
+**[Try the live dashboard](https://early-warning-risk-triage.streamlit.app)**, a real complaint (or one you type) goes through both models live, no setup required.
 
 It's a research prototype for a single-semester project, not built for any one company and not deployment-ready; see Explicit Limitations below for what that means concretely. Full problem statement and motivation: `project_description.md`.
 
