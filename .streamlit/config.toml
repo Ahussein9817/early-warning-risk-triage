@@ -1,5 +1,5 @@
 # Real palette instead of default Streamlit styling. Reserved semantics:
-# - primaryColor: actions only (the Predict button) — never used for risk meaning.
+# - primaryColor: actions only (the Predict button), never used for risk meaning.
 # - Escalated/Not-Escalated colors are defined separately in dashboard/app.py
 #   (RISK_COLOR / SAFE_COLOR) and deliberately kept distinct from primaryColor
 #   so the action color and the risk color are never confusable.

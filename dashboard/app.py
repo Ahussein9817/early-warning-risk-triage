@@ -1,8 +1,8 @@
-"""Section 7 — Dashboard.
+"""Section 7, Dashboard.
 
 Streamlit app: a complaint (picked from a real example, or typed in) goes
-through the pipeline live — structured fields one-hot encoded exactly as at
-training time, narrative embedded live with MiniLM — and both the baseline
+through the pipeline live, structured fields one-hot encoded exactly as at
+training time, narrative embedded live with MiniLM, and both the baseline
 (structured-only) and fused (structured + text) models' predictions and
 confidence are shown side by side.
 """
@@ -20,16 +20,16 @@ from sentence_transformers import SentenceTransformer
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT))
 
-RISK_COLOR = "#c0392b"    # escalated — a warning, not good news. Distinct from theme.primaryColor.
+RISK_COLOR = "#c0392b"    # escalated, a warning, not good news. Distinct from theme.primaryColor.
 SAFE_COLOR = "#2a7a4f"    # not escalated
 MUTED_COLOR = "#6b7280"
 CALIBRATION_NOTE = (
     "Not calibrated against the hand-labeled evaluation rate (78.3% true "
-    "escalation vs. this model's ~26.6% training rate) — read as a ranking "
+    "escalation vs. this model's ~26.6% training rate), read as a ranking "
     "signal, not a probability. See README Evaluation for why."
 )
 NO_NARRATIVE_NOTE = (
-    "No narrative — this is the subgroup where evaluation found fused offers "
+    "No narrative, this is the subgroup where evaluation found fused offers "
     "little advantage over baseline."
 )
 
@@ -215,7 +215,7 @@ def main() -> None:
                                          index=categories["state"].index(sel["state"]))
             sel["company"] = st.selectbox("Company", categories["company_options"],
                                            index=categories["company_options"].index(sel["company"]))
-            narrative = st.text_area("Complaint narrative (optional — leave blank to simulate "
+            narrative = st.text_area("Complaint narrative (optional, leave blank to simulate "
                                       "the ~56% of complaints with no narrative)",
                                       value=st.session_state.narrative, height=200)
             st.session_state.narrative = narrative
@@ -243,7 +243,7 @@ def main() -> None:
                 st.info(f"**Models agree:** {label}")
             else:
                 st.warning(
-                    f"**Models disagree** — baseline: "
+                    f"**Models disagree**, baseline: "
                     f"{'Escalated' if b_pred else 'Not Escalated'}, fused: "
                     f"{'Escalated' if f_pred else 'Not Escalated'}"
                 )
@@ -271,14 +271,14 @@ def main() -> None:
                     "probability.\n"
                     "- **Baseline vs. fused, on the deconfounded evaluation subgroup "
                     "(has_narrative, n=51): fused AUC 0.6875 vs. baseline 0.6701** "
-                    "— a modest, directionally positive difference, not a decisive "
+                    "a modest, directionally positive difference, not a decisive "
                     "one at this sample size.\n"
                     "- Full methodology, the base-rate divergence finding, and all "
                     "limitations are in the project README."
                 )
 
     st.caption(
-        "Research prototype — not deployment-ready. Trained on a proxy label "
+        "Research prototype, not deployment-ready. Trained on a proxy label "
         "that is not verified ground truth; see the README for full "
         "methodology and limitations."
     )

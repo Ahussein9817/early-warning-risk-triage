@@ -1,6 +1,6 @@
-"""Section 6 — Evaluate.
+"""Section 6, Evaluate.
 
-Scores baseline and fused models against the hand-labeled evaluation sample —
+Scores baseline and fused models against the hand-labeled evaluation sample:
 the real held-out ground truth, never used in training, independent of the
 proxy label used to train the models. Reports precision/recall/AUC overall,
 split by has_narrative, and split by narrative length (short/long relative to
@@ -8,7 +8,7 @@ MiniLM's 256-token truncation point), per BUILD_INSTRUCTIONS.md acceptance
 criteria.
 
 The has_narrative split (and its short/long sub-split) is the headline
-comparison, not the pooled/overall number — see README.md Methodology for why
+comparison, not the pooled/overall number, see README.md Methodology for why
 the pooled comparison is confounded by a correlation between narrative
 presence and the hand-labeled ground truth itself.
 """
@@ -51,7 +51,7 @@ def load_hand_labeled(path: Path) -> pd.DataFrame:
         raise EvaluateError(f"Hand-labeled file at {path} is empty.")
     if df["escalated"].isnull().any():
         raise EvaluateError(
-            f"Hand-labeled file at {path} has rows with a blank `escalated` value — "
+            f"Hand-labeled file at {path} has rows with a blank `escalated` value, "
             "every row must be labeled before evaluation."
         )
     df["escalated"] = df["escalated"].astype(int)
@@ -119,7 +119,7 @@ def build_eval_matrices(
 
 def score_subset(model: Any, X: pd.DataFrame, y: pd.Series, threshold: float) -> dict[str, Any]:
     """Score `model` on (X, y). AUC is None (not computed) when only one class
-    is present — roc_auc_score is mathematically undefined in that case rather
+    is present, roc_auc_score is mathematically undefined in that case rather
     than a number worth reporting.
     """
     y_proba = model.predict_proba(X)[:, 1]
@@ -201,13 +201,13 @@ def generate_report(
     results: dict[str, dict[str, dict[str, Any]]], base_rate: dict[str, Any]
 ) -> str:
     """Build the markdown comparison report. Headline is the base-rate divergence
-    between the proxy label and the hand-labeled ground truth — direct evidence
+    between the proxy label and the hand-labeled ground truth, direct evidence
     the two measure related but distinct constructs (company concession behavior
     vs. genuine complaint severity), not a footnote. AUC (threshold-independent)
     is the primary comparison metric; precision/recall at the fixed 0.5 threshold
     are reported but labeled secondary, since that threshold was calibrated to
     the proxy's training prevalence (26.6%), not the hand-labeled sample's true
-    rate — a mismatch that mechanically depresses recall regardless of how well
+    rate, a mismatch that mechanically depresses recall regardless of how well
     the models actually discriminate.
     """
     lines = ["# Baseline vs. Fused Model Comparison\n"]
@@ -219,14 +219,14 @@ def generate_report(
     )
     lines.append(
         "This is direct evidence that the proxy label (company concession "
-        "behavior — did company_response grant relief, or was the response "
+        "behavior, did company_response grant relief, or was the response "
         "untimely) and genuine complaint severity (human judgment) are related "
-        "but distinct constructs — exactly the limitation `project_description.md` "
+        "but distinct constructs, exactly the limitation `project_description.md` "
         "flagged upfront: reported performance is indicative, not a validated "
         "ground-truth benchmark.\n"
     )
     if base_rate["evidence"]:
-        lines.append("Evidence for *why* they diverge — proxy escalation rate by sub_issue, in the training data:\n")
+        lines.append("Evidence for *why* they diverge, proxy escalation rate by sub_issue, in the training data:\n")
         lines.append("| sub_issue | n (training) | proxy escalated rate |")
         lines.append("|---|---|---|")
         for sub_issue, n, rate in base_rate["evidence"]:
@@ -234,9 +234,9 @@ def generate_report(
         lines.append(
             "\nCompanies concede (grant relief) far more readily on cheap, "
             "procedural sub_issues than on substantive ones like identity theft "
-            "— which they're more likely to deny outright. Since the models "
+            "which they're more likely to deny outright. Since the models "
             "learned the proxy's pattern, they can rank procedural complaints as "
-            "*more* likely to escalate than identity-theft complaints — the "
+            "*more* likely to escalate than identity-theft complaints, the "
             "opposite of genuine severity. This is the direct mechanism behind "
             "the sub-0.5 AUC in the `overall` and `no_narrative` subgroups below "
             "(both dominated by sub_issue-category signal alone).\n"
@@ -246,7 +246,7 @@ def generate_report(
         "**Practical consequence:** both models were trained to predict "
         "\"positive\" at roughly the proxy's 26.6% rate. Scored against a "
         "ground truth that's actually 78.3% positive, a fixed 0.5 decision "
-        "threshold mechanically produces low recall — not because the models "
+        "threshold mechanically produces low recall, not because the models "
         "can't discriminate, but because the threshold is calibrated to the "
         "wrong prevalence. **AUC (threshold-independent, measures ranking "
         "quality only) is reported as the primary comparison metric below; "
@@ -255,7 +255,7 @@ def generate_report(
 
     lines.append(
         "**Headline subgroup for the AUC comparison itself: `has_narrative`.** "
-        "The pooled/overall numbers are additionally confounded — the "
+        "The pooled/overall numbers are additionally confounded, the "
         "hand-labeled ground truth correlates narrative presence with "
         "escalation (see README Methodology), so a fused-model AUC advantage "
         "overall could reflect detecting *whether* a narrative exists rather "
@@ -277,7 +277,7 @@ def generate_report(
         )
     lines.append("")
 
-    lines.append("## Precision / Recall at 0.5 threshold (secondary — threshold-sensitive, see note above)\n")
+    lines.append("## Precision / Recall at 0.5 threshold (secondary, threshold-sensitive, see note above)\n")
     for subgroup in ["overall", "has_narrative", "no_narrative", "short_narrative", "long_narrative"]:
         b = results[subgroup]["baseline"]
         f = results[subgroup]["fused"]

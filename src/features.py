@@ -1,9 +1,9 @@
-"""Section 3 — Structured features.
+"""Section 3, Structured features.
 
 Builds the structured-only feature matrix used to train the baseline model
 (Stage 1). Deliberately excludes company_response/timely (the label's own
-inputs — see label.py) and product (constant across this dataset), and
-buckets the high-cardinality `company` field into top-N + "Other" — see
+inputs, see label.py) and product (constant across this dataset), and
+buckets the high-cardinality `company` field into top-N + "Other", see
 config.yaml `features` for the full rationale.
 
 Acceptance criteria this module supports (see BUILD_INSTRUCTIONS.md):

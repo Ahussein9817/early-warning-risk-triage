@@ -1,7 +1,7 @@
-"""Section 2 — Label.
+"""Section 2, Label.
 
 Derives the proxy escalation label for every complaint in the raw ingested
-dataset. Isolated in its own module so the rule is auditable — see
+dataset. Isolated in its own module so the rule is auditable, see
 config.yaml `label.relief_company_responses` and BUILD_INSTRUCTIONS.md
 Architecture section for the rule and its rationale (consumer_disputed was
 discontinued by CFPB in 2017; timely substitutes for it).

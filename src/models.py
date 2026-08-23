@@ -1,13 +1,13 @@
-"""Section 5 — Baseline and Fused models.
+"""Section 5, Baseline and Fused models.
 
-Trains two logistic regression classifiers — baseline (structured features
-only, Section 3) and fused (structured + text embeddings, Sections 3+4) —
+Trains two logistic regression classifiers: baseline (structured features
+only, Section 3) and fused (structured + text embeddings, Sections 3+4),
 on the identical train/test split, so any performance difference between
 them is attributable to the text signal and nothing else, not a different
 split or different rows.
 
 The AUC logged here is an internal sanity check on the proxy-labeled
-train/test split only — it is NOT the project's official result. The
+train/test split only. It is NOT the project's official result. The
 official baseline-vs-fused comparison (Section 6) scores both models
 against the separate, hand-labeled evaluation sample.
 
@@ -110,7 +110,7 @@ def build_fused_matrices(
     if merged["emb_0"].isnull().any():
         raise ModelsError(
             "Some complaint_ids in structured features have no matching text "
-            "embedding row — expected every row to have one (possibly zero-vector)."
+            "embedding row, expected every row to have one (possibly zero-vector)."
         )
 
     feature_cols = [c for c in merged.columns if c not in ("complaint_id", "escalated")]
@@ -171,7 +171,7 @@ def run_models(config_path: Path | None = None) -> tuple[Path, Path]:
     baseline_auc = roc_auc_score(yb_test, baseline_model.predict_proba(Xb_test)[:, 1])
     logger.info(
         "Baseline model: %d train rows, %d features. Internal test-split AUC=%.4f "
-        "(sanity check only — the official comparison is Section 6, vs. the hand-labeled sample).",
+        "(sanity check only, the official comparison is Section 6, vs. the hand-labeled sample).",
         len(Xb_train), Xb_train.shape[1], baseline_auc,
     )
 
@@ -182,7 +182,7 @@ def run_models(config_path: Path | None = None) -> tuple[Path, Path]:
     fused_auc = roc_auc_score(yf_test, fused_model.predict_proba(Xf_test)[:, 1])
     logger.info(
         "Fused model: %d train rows, %d features. Internal test-split AUC=%.4f "
-        "(sanity check only — the official comparison is Section 6, vs. the hand-labeled sample).",
+        "(sanity check only, the official comparison is Section 6, vs. the hand-labeled sample).",
         len(Xf_train), Xf_train.shape[1], fused_auc,
     )
 

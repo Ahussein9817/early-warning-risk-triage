@@ -1,4 +1,4 @@
-"""Section 1 — Ingest.
+"""Section 1, Ingest.
 
 Pulls debt-collection complaints from the public CFPB Consumer Complaint
 Database API, validates the response, normalizes records to the required
@@ -47,14 +47,14 @@ def fetch_page(
     Raises IngestError with a clear message if all retries are exhausted.
 
     `sort`, `date_received_min`, and `date_received_max` are required (not
-    optional) because the API's default order is not a stable global order —
+    optional) because the API's default order is not a stable global order:
     without an explicit sort and a fixed date range, re-running ingestion
     later is not guaranteed to return the same set of records, which breaks
     reproducibility.
 
     Pagination uses `search_after` cursoring (`{timestamp_ms}_{complaint_id}`,
     taken from the previous page's last hit's "sort" field), not an frm/offset
-    parameter — the CFPB API's `frm` parameter is a known, unresolved bug
+    parameter, the CFPB API's `frm` parameter is a known, unresolved bug
     (https://github.com/cfpb/cfpb.github.io/issues/292): it is silently
     ignored, so requests with different `frm` values return identical results.
     `search_after=None` fetches the first page.
@@ -176,7 +176,7 @@ def fetch_all_complaints(config: dict[str, Any]) -> list[dict[str, Any]]:
 
     Stratified (rather than one contiguous pull) so the dataset spans the
     full configured date range instead of clustering in the earliest days
-    of it — see config.yaml `cfpb.sampling` for the stratum boundaries and
+    of it, see config.yaml `cfpb.sampling` for the stratum boundaries and
     rationale.
     """
     cfpb_cfg = config["cfpb"]

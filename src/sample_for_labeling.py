@@ -1,9 +1,9 @@
 """Generates the hand-labeling template for the Section 6 evaluation sample.
 
-Draws a random sample from the model test split (never the train split — the
+Draws a random sample from the model test split (never the train split, the
 whole point is to evaluate on rows the models never trained on) for the
 builder to manually review and label. The exported CSV deliberately excludes
-company_response, timely, and the proxy `escalated` label — those are what
+company_response, timely, and the proxy `escalated` label, those are what
 the proxy label rule is built from, so seeing them while hand-labeling would
 just reproduce the proxy's own answer rather than provide an independent
 validation signal (same leakage principle as label.py/features.py, applied

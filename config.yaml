@@ -1,5 +1,5 @@
 # Single source of truth for tunable values. Per BUILD_INSTRUCTIONS.md Requirements:
-# "this and all other tunable values (seed, paths, API params) live in one config file —
+# "this and all other tunable values (seed, paths, API params) live in one config file
 # never hardcoded elsewhere."
 
 seed: 42
@@ -7,7 +7,7 @@ seed: 42
 data:
   raw_dir: data/raw
   processed_dir: data/processed
-  labeled_path: data/labeled/hand_labeled.csv   # the 100-200 row hand-labeled evaluation sample (Section 2 does not write this — you create it manually)
+  labeled_path: data/labeled/hand_labeled.csv   # the 100-200 row hand-labeled evaluation sample (Section 2 does not write this, you create it manually)
   hand_label_template_filename: hand_labeled_TEMPLATE.csv
   hand_label_sample_size: 150
   raw_filename: debt_collection_complaints_raw.json
@@ -19,13 +19,13 @@ cfpb:
   base_url: "https://www.consumerfinance.gov/data-research/consumer-complaints/search/api/v1/"
   product: "Debt collection"
   page_size: 100       # CFPB API's per-request record limit (max supported by the endpoint)
-  sort: "created_date_asc"     # required for reproducibility — see BUILD_INSTRUCTIONS.md note
+  sort: "created_date_asc"     # required for reproducibility, see BUILD_INSTRUCTIONS.md note
   request_timeout_seconds: 30
   max_retries: 3              # CFPB's API is slow/flaky at this volume; retry transient failures
   retry_backoff_seconds: 5    # doubles each retry: 5s, 10s, 20s
   # Field names verified 2026-08-21 against the live CFPB API response shape.
   # consumer_disputed and timely_response/consumer_complaint_narrative from the
-  # original spec do not match the live schema — see BUILD_INSTRUCTIONS.md Inputs
+  # original spec do not match the live schema, see BUILD_INSTRUCTIONS.md Inputs
   # section for the full explanation (consumer_disputed was discontinued in 2017).
   required_fields:
     - complaint_id
@@ -44,7 +44,7 @@ cfpb:
   # Stratified sampling: draws an even slice from each quarter rather than a single
   # contiguous block, so the dataset spans multiple years instead of ~4 weeks.
   # Cutoff is fixed at 2026-05-21 (3 months before this config was written), not
-  # "today" — recent complaints often still show company_response="In progress",
+  # "today", recent complaints often still show company_response="In progress",
   # which would corrupt the label rule below. A fixed cutoff also keeps the pull
   # reproducible forever, regardless of when the pipeline is re-run.
   sampling:
@@ -75,7 +75,7 @@ label:
 
 features:
   # Structured features for the baseline model (Stage 1). Deliberately excludes
-  # company_response and timely — those two fields are what the label rule (above)
+  # company_response and timely, those two fields are what the label rule (above)
   # is derived from, so using them as features would leak the label directly into
   # the input (the model would reverse-engineer the label rule instead of genuinely
   # predicting escalation). `product` is also excluded: constant across all records
@@ -85,7 +85,7 @@ features:
     - issue
     - sub_issue
     - state
-  # `company` has 689 unique values on 5,600 records — one-hot encoding all of them
+  # `company` has 689 unique values on 5,600 records, one-hot encoding all of them
   # would add 689 mostly-sparse columns (most companies appear only 1-5 times),
   # risking overfitting on rare companies and dwarfing every other structured
   # feature by column count. Bucketed instead: top N companies by complaint volume
@@ -125,6 +125,6 @@ models:
     # C=0.1 nearly halves all three (+1.85/-1.78/-1.16) for a <1% relative AUC cost
     # (0.7940->0.7878 on the internal test split) and a slight precision gain.
     # Applied to both baseline and fused models (not just baseline) since the fused
-    # model shares the same company_bucketed columns — using different regularization
+    # model shares the same company_bucketed columns, using different regularization
     # between the two would itself become a confound in the baseline-vs-fused comparison.
     C: 0.1

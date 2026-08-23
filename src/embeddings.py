@@ -1,12 +1,12 @@
-"""Section 4 — Text embeddings.
+"""Section 4, Text embeddings.
 
 Generates narrative embeddings via a HuggingFace sentence-transformers model
 for the fused model (Stage 2). Complaints with no narrative get a zero
-vector — per BUILD_INSTRUCTIONS.md Architecture, no-narrative complaints are
+vector, per BUILD_INSTRUCTIONS.md Architecture, no-narrative complaints are
 never dropped from the dataset, only zero-imputed at this stage.
 
 Model: sentence-transformers/all-MiniLM-L6-v2 (384-dim). Note: this model's
-max input length is 256 tokens — longer narratives are silently truncated by
+max input length is 256 tokens, longer narratives are silently truncated by
 the tokenizer. See README.md Explicit Limitations for the full discussion;
 Section 6 (Evaluate) splits results by narrative length to surface whether
 this masks the fused model's benefit on long narratives specifically.
