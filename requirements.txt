@@ -4,10 +4,6 @@ PyYAML==6.0.2
 pandas==2.2.3
 
 # Text embeddings (Section 4):
-# CPU-only torch build: no GPU on Streamlit Community Cloud or local dev here,
-# and the default PyPI wheel is much larger (bundles CUDA libraries), which
-# was likely causing very slow/stalled installs on free-tier build infra.
---extra-index-url https://download.pytorch.org/whl/cpu
 sentence-transformers==6.0.0
 torch==2.13.0
 
