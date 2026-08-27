@@ -4,7 +4,6 @@ Build a working pipeline for an **early-warning triage model** that tests whethe
 
 Data source: the **CFPB Consumer Complaint Database** public API, scoped to a single product category: **Debt Collection**.
 
-**Build mode: full implementation with mandatory narrated checkpoints.** This is the builder's first full pipeline. They are not writing the implementation code themselves. You (the agent) build it, but they must understand what was built, not just receive a finished result. Work one section at a time, in the order given under Architecture. For each section: build the full working implementation for that section only, then stop and walk the builder through the actual code you wrote: what each part does, why this approach over alternatives, and any tradeoffs or limitations. Do not proceed to the next section until the builder has reviewed the walkthrough and either approved it or asked follow-up questions you've answered. The builder's agency in this process is exercised through the decisions and checkpoints (data scope, label rule, model choice, what "good enough" looks like, whether to accept a section), not through writing the code by hand.
 
 ## Status (as of 2026-08-22)
 
