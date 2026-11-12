@@ -11,5 +11,5 @@ Evidence types: **README-reported**, **regenerated** (from committed artifacts),
 | Large-scale proxy-label complement (n=1,120) | UNSUPPORTED (not reproducible) | README-reported | README | Scored against the proxy, whose base rate differs from the hand labels (26.6% vs 78.3%) |
 | Dashboard renders and predicts headlessly | VERIFIED (local) | test (opt-in `RUN_SLOW=1`) | `tests/test_dashboard_smoke.py` | Downloads MiniLM |
 | Dockerfile builds and serves the dashboard | VERIFIED (in CI only) | CI | run 43153694669, `docker` job | Not built locally |
-| Live dashboard at early-warning-risk-triage.streamlit.app | PARTIAL (unconfirmed) | README-reported; one HTTP request on 2026-11-12 | README | The request was redirected (303) to a Streamlit sign-in page, so public access could not be confirmed; the owner should check the app's sharing setting |
+| Live dashboard at early-warning-risk-triage.streamlit.app is publicly accessible | USER_CONFIRMED | owner statement 2026-11-12 | README | Not independently verified: an automated request was redirected (303) to a Streamlit sign-in handshake |
 | 74 tests, ruff, CI; line coverage 44% | VERIFIED | CI | run 43156063417 | Four modules have no unit tests |
