@@ -191,3 +191,23 @@ The more consequential finding is the base-rate divergence itself: the proxy lab
 - Company identity is only usable as a feature for ~53% of records; the rest fall into a generic "Other" bucket.
 - CFPB complaints are complaints filed against companies, not literal insurance claims, clinical records, or loan applications, this project demonstrates a generalizable pattern, not a domain-specific production system.
 - This is a research prototype for a single semester; no claim is made that it is deployment-ready.
+
+## Development: setup, tests, CI, Docker
+
+Added on branch `improve/portfolio-refinement` (2026-11-11). None of this changes the experimental results above.
+
+```sh
+python3.12 -m venv .venv && source .venv/bin/activate
+pip install -r requirements.txt -r requirements-dev.txt
+ruff check .
+pytest -q --cov=src                              # 72 collected; 71 run by default
+RUN_SLOW=1 pytest tests/test_dashboard_smoke.py  # renders the dashboard headlessly (downloads MiniLM)
+```
+
+- **Tests** (`tests/`): ingestion with mocked HTTP (retry/backoff, `search_after` cursor paging, malformed and empty responses, missing cursor), the proxy-label rule, structured features (leakage columns excluded, company bucketing, null state), embeddings (zero-vector path, id alignment, with a stub encoder), train/test split and baseline/fused matrix alignment, the paired bootstrap (identical models give a zero delta, same resampled rows for both models, seed determinism, single-class resamples skipped and counted), and hand-label loading. Line coverage on 2026-11-11 was 44% overall: `ingest.py` 93%, `evaluate.py` 50%; `dashboard_data.py`, `large_scale_comparison.py`, `llm_rubric_label.py` and `sample_for_labeling.py` have no unit tests.
+- **Dependencies:** the pins in `requirements.txt` were installed on Python 3.12 and the suite passed against them. Python 3.15 was not tried.
+- **CI:** `.github/workflows/ci.yml` runs ruff + pytest, then builds the Docker image and polls Streamlit's health endpoint. A workflow file is not evidence of a passing run; check the Actions tab.
+- **Docker:** `Dockerfile` serves `dashboard/app.py` with the committed models (CPU torch, MiniLM baked in). Verification status as of 2026-11-11: **not built or started** (Docker was not available locally). The dashboard itself was verified outside Docker: it started under Streamlit on the pinned dependencies and the headless smoke test passed.
+  ```sh
+  docker build -t risk-triage-dashboard . && docker run --rm -p 8501:8501 risk-triage-dashboard
+  ```
