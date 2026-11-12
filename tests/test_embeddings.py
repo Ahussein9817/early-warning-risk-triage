@@ -58,3 +58,9 @@ def test_build_text_embeddings_alignment_with_complaint_ids():
 def test_load_labeled_data_missing(tmp_path):
     with pytest.raises(EmbeddingsError, match="not found"):
         embeddings.load_labeled_data(tmp_path / "x.json")
+
+
+def test_nan_narrative_from_dataframe_is_treated_as_missing():
+    out = embeddings.generate_embeddings(_recs(["abc", float("nan")]), "m", 4)
+    assert (out[1] == 0).all() and (out[0] == 3).all()
+    assert FakeModel.calls == [["abc"]]

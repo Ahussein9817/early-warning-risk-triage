@@ -211,3 +211,11 @@ RUN_SLOW=1 pytest tests/test_dashboard_smoke.py  # renders the dashboard headles
   ```sh
   docker build -t risk-triage-dashboard . && docker run --rm -p 8501:8501 risk-triage-dashboard
   ```
+
+### Independent reproduction of the hand-labeled evaluation (2026-11-11)
+
+`python scripts/reproduce_eval.py` regenerates the hand-labeled results table from committed artifacts only (`data/labeled/hand_labeled.csv`, the two committed models and MiniLM weights from Hugging Face). No CFPB pull and no stored predictions are used: feature vectors are rebuilt from each model's `feature_names_in_` and the narratives are re-embedded. Result (`results/reproduced_hand_label_eval.md`): **every README number in the hand-labeled table reproduces to four decimals**, including all four subgroup AUC pairs, deltas and the paired-bootstrap CIs (2,000 resamples, seed 42), and the `long_narrative` single-class result. This confirms the table is regenerable from the committed files; it does not independently check the human labels themselves.
+
+**Not reproducible from committed files:** the 5,600-row dataset statistics (26.6% proxy rate, 52.96% company coverage), the large-scale proxy-label complement (n=1,120) and the model training itself, because the raw/processed data and the train/test split rows are not committed. Re-pulling the CFPB data with the fixed cutoff is the way to test them; that has not been done.
+
+Fix made while building this: `generate_embeddings` now treats non-string narratives (None or pandas NaN) as missing; previously a NaN narrative (truthy) would have been sent to the encoder and crashed.

@@ -69,7 +69,8 @@ def generate_embeddings(
     from sentence_transformers import SentenceTransformer
 
     texts = [r.get("complaint_what_happened") for r in records]
-    narrative_indices = [i for i, t in enumerate(texts) if t]
+    # non-str values (None, or NaN when records come from a DataFrame) count as missing
+    narrative_indices = [i for i, t in enumerate(texts) if isinstance(t, str) and t]
     narrative_texts = [texts[i] for i in narrative_indices]
 
     embeddings = np.zeros((len(records), dimension), dtype=np.float32)
